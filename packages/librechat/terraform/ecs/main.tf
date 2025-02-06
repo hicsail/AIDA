@@ -1,6 +1,6 @@
 # Create ECS cluster
 resource "aws_ecs_cluster" "aida_cluster" {
-  name = "aida"
+  name = "aida-cluster"
 }
 
 # IAM Role for Fargate Task Execution
