@@ -27,11 +27,11 @@ provider "aws" {
    source = "./ecs"
 }
 
-# module "rds" {
-#   source = "./rds"
-#   vpc_id = module.vpc.vpc_id
-#   private_subnet_ids = module.vpc.private_subnet_ids
-# }
+module "rds" {
+  source = "./rds"
+  vpc_id = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+}
 
 module "redis" {
   source = "./redis"
