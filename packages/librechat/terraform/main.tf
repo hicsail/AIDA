@@ -7,10 +7,10 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "aida-terraform-state"
-    key            = "aida/terraform.tfstate"
-    region         = "us-east-1"
-    encrypt        = true
+    bucket  = "aida-terraform-state"
+    key     = "aida/terraform.tfstate"
+    region  = "us-east-1"
+    encrypt = true
   }
 }
 
@@ -23,20 +23,32 @@ provider "aws" {
   }
 }
 
- module "ecs" {
-   source = "./ecs"
+module "ecs" {
+  source = "./ecs"
 }
 
 module "rds" {
-  source = "./rds"
-  vpc_id = module.vpc.vpc_id
+  source             = "./rds"
+  vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
 }
 
 module "redis" {
-  source = "./redis"
-  vpc_id = module.vpc.vpc_id
+  source             = "./redis"
+  vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
+}
+
+module "litellm" {
+  source             = "./litellm"
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+  public_subnet_ids  = module.vpc.public_subnet_ids
+  database_url       = module.rds.database_litellm
+  execution_role_arn = module.ecs.execution_role_arn
+  ecs_task_role_arn  = module.ecs.ecs_task_role_arn
+  ecs_log_group      = module.ecs.ecs_log_group
+  cluster_id         = module.ecs.cluster_id
 }
 
 module "vpc" {

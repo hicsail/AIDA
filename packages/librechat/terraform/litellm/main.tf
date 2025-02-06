@@ -1,124 +1,46 @@
-resource "aws_ecr_repository" "beacon_api" {
-  name = "beacon-api"
+# LiteLLM Master Key
+resource "random_password" "litellm_master_password" {
+  length      = 20
+  special     = true
+  min_special = 0
 }
 
-resource "aws_ecr_repository" "beacon_ai" {
-  name = "beacon-ai"
+resource "random_password" "litellm_key_password" {
+  length      = 20
+  special     = true
+  min_special = 0
 }
 
-# Create ECS cluster
-resource "aws_ecs_cluster" "beacon-api" {
-  name = "beacon-api"
+resource "aws_secretsmanager_secret" "litellm_secret" {
+  name = "litellm-secret"
 }
-# IAM Role for Fargate Task Execution
-resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "ecs-task-execution-role"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
-      }
-    ]
+resource "aws_secretsmanager_secret_version" "litellm_secret_value" {
+  secret_id = aws_secretsmanager_secret.litellm_secret.id
+  secret_string = jsonencode({
+    key = "sk-${random_password.litellm_master_password.result}",
+    salt = "sk-${random_password.litellm_key_password.result}"
   })
-}
-
-resource "aws_iam_policy" "ecr_pull_policy" {
-  name = "ecr-pull-policy"
-  description = "Policy to allow ECS tasks to pull images from ECR"
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Sid    = "AllowECRPullAccess",
-        Effect = "Allow",
-        Action = [
-          "ecr:GetAuthorizationToken",
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage"
-        ],
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role" "ecs_task_role" {
-    name = "ecs-task-role"
-
-    assume_role_policy = jsonencode({
-        Version = "2012-10-17"
-        Statement = [
-        {
-            Action = "sts:AssumeRole"
-            Effect = "Allow"
-            Principal = {
-            Service = "ecs-tasks.amazonaws.com"
-            }
-        }
-        ]
-    })
-}
-
-resource "aws_iam_role_policy_attachment" "ecr_pull_policy_attachment" {
-  role       = aws_iam_role.ecs_task_execution_role.name
-  policy_arn = aws_iam_policy.ecr_pull_policy.arn
-}
-
-resource "aws_cloudwatch_log_group" "ecs_log_group" {
-  name              = "/ecs/beacon-api"
-  retention_in_days = 14
-}
-
-resource "aws_iam_policy" "cloudwatch_logs_policy" {
-  name        = "ecs-cloudwatch-logs-policy"
-  description = "Policy to allow ECS tasks to write logs to CloudWatch"
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = [
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ],
-        Resource = "${aws_cloudwatch_log_group.ecs_log_group.arn}:*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "cloudwatch_logs_policy_attachment" {
-  role       = aws_iam_role.ecs_task_execution_role.name
-  policy_arn = aws_iam_policy.cloudwatch_logs_policy.arn
 }
 
 # Fargate Task Definition
-resource "aws_ecs_task_definition" "task" {
-  family                   = "beacon-api-task"
-  cpu                      = "1024"   # Adjust CPU as needed
-  memory                   = "2048"   # Adjust memory as needed
+resource "aws_ecs_task_definition" "litellm_task" {
+  family                   = "litellm-task"
+  cpu                      = "4096" # Adjust CPU as needed
+  memory                   = "8192" # Adjust memory as needed
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
-  task_role_arn = aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = var.execution_role_arn
+  task_role_arn            = var.ecs_task_role_arn
 
   container_definitions = jsonencode([
     {
-      name        = "beacon-api"
-      image       = "${aws_ecr_repository.beacon_api.repository_url}:main"
+      name  = "litellm"
+      image = "ghcr.io/berriai/litellm:main-latest"
       portMappings = [
         {
-          containerPort = 3000
-          hostPort      = 3000
+          containerPort = 4000
+          hostPort      = 4000
           protocol      = "tcp"
         }
       ]
@@ -128,42 +50,35 @@ resource "aws_ecs_task_definition" "task" {
           value = var.database_url
         },
         {
-          name  = "REDIS_HOST"
-          value = var.redis_host
+          name = "LITELLM_MASTER_KEY",
+          value = jsondecode(aws_secretsmanager_secret_version.litellm_secret_value.secret_string).key
         },
         {
-          name  = "REDIS_PORT"
-          value = "6379"
+          name = "LITELLM_SALT_KEY",
+          value = jsondecode(aws_secretsmanager_secret_version.litellm_secret_value.secret_string).salt
         }
       ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.ecs_log_group.name
+          "awslogs-group"         = var.ecs_log_group
           "awslogs-region"        = "us-east-1"
           "awslogs-stream-prefix" = "ecs"
         }
-      }
-      healthCheck = {
-        command     = ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
-        interval    = 30
-        timeout     = 5
-        retries     = 3
-        startPeriod = 60
       }
     }
   ])
 }
 
 # Security Group for Fargate
-resource "aws_security_group" "fargate_sg" {
-  name        = "fargate-sg"
+resource "aws_security_group" "litellm_sg" {
+  name        = "litellm-sg"
   description = "Allow inbound traffic to Fargate service"
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port   = 3000
-    to_port     = 3000
+    from_port   = 4000
+    to_port     = 4000
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -177,96 +92,44 @@ resource "aws_security_group" "fargate_sg" {
 }
 
 # Fargate Service
-resource "aws_ecs_service" "service" {
-  name            = "beacon-api-service"
-  cluster         = aws_ecs_cluster.beacon-api.id
-  task_definition = aws_ecs_task_definition.task.arn
+resource "aws_ecs_service" "litellm_service" {
+  name            = "litellm-service"
+  cluster         = var.cluster_id
+  task_definition = aws_ecs_task_definition.litellm_task.arn
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = var.private_subnet_ids
-    security_groups = [aws_security_group.fargate_sg.id]
+    subnets          = var.private_subnet_ids
+    security_groups  = [aws_security_group.litellm_sg.id]
     assign_public_ip = false
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.tg.arn
-    container_name   = "beacon-api"
-    container_port   = 3000
-  }
-
-  desired_count = 1
-}
-
-# Fargate AI Task Definition
-resource "aws_ecs_task_definition" "ai-task" {
-  family                   = "beacon-ai-task"
-  cpu                      = "1024"   # Adjust CPU as needed
-  memory                   = "2048"   # Adjust memory as needed
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
-  task_role_arn = aws_iam_role.ecs_task_role.arn
-
-  container_definitions = jsonencode([
-    {
-      name        = "beacon-ai"
-      image       = "${aws_ecr_repository.beacon_ai.repository_url}:main"
-      environment = [
-        {
-          name  = "REDIS_HOST"
-          value = var.redis_host
-        },
-        {
-          name  = "REDIS_PORT"
-          value = "6379"
-        }
-      ]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.ecs_log_group.name
-          "awslogs-region"        = "us-east-1"
-          "awslogs-stream-prefix" = "ecs"
-        }
-      }
-    }
-  ])
-}
-
-# Fargate Service
-resource "aws_ecs_service" "ai-service" {
-  name            = "beacon-ai-service"
-  cluster         = aws_ecs_cluster.beacon-api.id
-  task_definition = aws_ecs_task_definition.ai-task.arn
-  launch_type     = "FARGATE"
-
-  network_configuration {
-    subnets         = var.private_subnet_ids
-    security_groups = [aws_security_group.fargate_sg.id]
-    assign_public_ip = false
+    target_group_arn = aws_lb_target_group.litellm_tg.arn
+    container_name   = "litellm"
+    container_port   = 4000
   }
 
   desired_count = 1
 }
 
 # Application Load Balancer
-resource "aws_lb_target_group" "tg" {
-  name        = "beacon-api-tg"
-  port        = 3000
+resource "aws_lb_target_group" "litellm_tg" {
+  name        = "litellm-tg"
+  port        = 4000
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
 
   health_check {
-    path                = "/"
-    protocol            = "HTTP"
-    matcher             = "200-399"
+    path     = "/"
+    protocol = "HTTP"
+    matcher  = "200-399"
   }
 }
 
-resource "aws_security_group" "alb_sg" {
-  name        = "alb-sg"
+resource "aws_security_group" "litellm_alb_sg" {
+  name        = "litellm-alb-sg"
   description = "Security group for the Application Load Balancer"
   vpc_id      = var.vpc_id
 
@@ -298,24 +161,22 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
-
-
-resource "aws_lb" "alb" {
-  name               = "beacon-api-alb"
+resource "aws_lb" "litellm_alb" {
+  name               = "litellm-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb_sg.id]
+  security_groups    = [aws_security_group.litellm_alb_sg.id]
   subnets            = var.public_subnet_ids
 }
 
 # ALB Listener
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.alb.arn
+resource "aws_lb_listener" "litellm_http" {
+  load_balancer_arn = aws_lb.litellm_alb.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.tg.arn
+    target_group_arn = aws_lb_target_group.litellm_tg.arn
   }
 }

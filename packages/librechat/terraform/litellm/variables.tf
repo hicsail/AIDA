@@ -18,7 +18,22 @@ variable database_url {
   type        = string
 }
 
-variable redis_host {
-  description = "Redis Host"
+variable "execution_role_arn" {
+  description = "Execution IAM role ARN"
+  type        = string
+}
+
+variable "ecs_task_role_arn" {
+  description = "Task IAM role ARN"
+  type        = string
+}
+
+variable "ecs_log_group" {
+  description = "Cloudwatch group name"
+  type        = string
+}
+
+variable "cluster_id" {
+  description = "Fargate Cluster ID"
   type        = string
 }
