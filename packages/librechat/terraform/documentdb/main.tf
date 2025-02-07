@@ -56,17 +56,17 @@ resource "aws_docdb_cluster" "aida_documentdb" {
   master_password                 = jsondecode(aws_secretsmanager_secret_version.documentdb_password_secret_value.secret_string).password
   db_subnet_group_name            = aws_docdb_subnet_group.aida_documentdb_subnet_group.name
   vpc_security_group_ids          = [aws_security_group.aida_documentdb_sg.id]
-  allow_major_version_upgrade = true
-  storage_encrypted           = true
+  allow_major_version_upgrade     = true
+  storage_encrypted               = true
 }
 
 resource "aws_docdb_cluster_instance" "aida_documentdb" {
   count = 1
   # Setting promotion tier to 0 makes the instance eligible to become a writer.
-  promotion_tier       = 0
-  cluster_identifier   = aws_docdb_cluster.aida_documentdb.cluster_identifier
-  identifier_prefix    = "${aws_docdb_cluster.aida_documentdb.cluster_identifier}-"
-  instance_class       = "db.t3.medium"
-  engine               = aws_docdb_cluster.aida_documentdb.engine
-  depends_on           = [aws_docdb_cluster.aida_documentdb]
+  promotion_tier     = 0
+  cluster_identifier = aws_docdb_cluster.aida_documentdb.cluster_identifier
+  identifier_prefix  = "${aws_docdb_cluster.aida_documentdb.cluster_identifier}-"
+  instance_class     = "db.t3.medium"
+  engine             = aws_docdb_cluster.aida_documentdb.engine
+  depends_on         = [aws_docdb_cluster.aida_documentdb]
 }
