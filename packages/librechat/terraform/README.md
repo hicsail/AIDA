@@ -7,12 +7,12 @@
 Navigate to the query builder in Amazon RDS. Connect to the LiteLLM database to start (`litellm`). Run the command
 
 ```
-create database librechat;
+create database rag;
 ```
 
 2. Enable the vector extension
 
-Connect to the newly created LibreChat database (`librechat`). Run the command
+Connect to the newly created RAG database (`rag`). Run the command
 
 ```
 CREATE EXTENSION vector;

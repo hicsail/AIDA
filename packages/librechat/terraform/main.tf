@@ -51,6 +51,12 @@ module "litellm" {
   cluster_id         = module.ecs.cluster_id
 }
 
+module "documentdb" {
+  source             = "./documentdb/"
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+}
+
 module "vpc" {
   source = "./vpc"
 }
