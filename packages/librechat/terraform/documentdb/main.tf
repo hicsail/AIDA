@@ -62,7 +62,7 @@ resource "aws_docdb_cluster" "aida_documentdb" {
 }
 
 resource "aws_docdb_cluster_instance" "aida_documentdb" {
-  count = 1
+  count = 2
   # Setting promotion tier to 0 makes the instance eligible to become a writer.
   promotion_tier     = 0
   cluster_identifier = aws_docdb_cluster.aida_documentdb.cluster_identifier
