@@ -57,8 +57,8 @@ module "documentdb" {
   private_subnet_ids = module.vpc.private_subnet_ids
 }
 
-module "documentdb" {
-  source             = "./documentdb/"
+module "librechat" {
+  source             = "./librechat/"
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
   public_subnet_ids  = module.vpc.public_subnet_ids

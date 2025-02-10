@@ -108,8 +108,8 @@ resource "aws_ecs_task_definition" "librechat_task" {
           value = "/efs/librechat.yaml"
         },
         {
-          name  = "librechat_API_KEY",
-          value = var.librechat_key
+          name  = "LITELLM_API_KEY",
+          value = var.litellm_key
         }
       ]
       logConfiguration = {
