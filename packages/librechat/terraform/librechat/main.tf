@@ -24,9 +24,57 @@ resource "aws_secretsmanager_secret_version" "librechat_jwt_secret_value" {
   })
 }
 
+# LibreChat Creds Secret
+resource "random_id" "librechat_creds_key" {
+  byte_length = 32
+}
+
+# LibreChat Creds IV
+resource "random_id" "librechat_creds_iv" {
+  byte_length = 16
+}
+
+resource "aws_secretsmanager_secret" "librechat_creds_secret" {
+  name = "librechat-creds-secret"
+}
+
+resource "aws_secretsmanager_secret_version" "librechat_creds_secret_value" {
+  secret_id = aws_secretsmanager_secret.librechat_creds_secret.id
+  secret_string = jsonencode({
+    key = random_id.librechat_creds_key.hex,
+    iv  = random_id.librechat_creds_iv.hex
+  })
+}
+
 # EFS to store configuration
 resource "aws_efs_file_system" "librechat_efs" {
   creation_token = "librechat_efs"
+}
+
+resource "aws_security_group" "librechat_efs_sg" {
+  name        = "librechat-efs-sg"
+  description = "Allow inbound traffic to LibreChat efs"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port   = 2049
+    to_port     = 2049
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_efs_mount_target" "librechat_mount_target" {
+  file_system_id  = aws_efs_file_system.librechat_efs.id
+  subnet_id       = var.private_subnet_ids[0]
+  security_groups = [aws_security_group.librechat_efs_sg.id]
 }
 
 # Fargate Task Definition
@@ -56,8 +104,8 @@ resource "aws_ecs_task_definition" "librechat_task" {
           value = "0.0.0.0"
         },
         {
-          name  = "PORT"
-          value = 3080
+          name  = "PORT",
+          value = "3080"
         },
         {
           name  = "MONGO_URI",
@@ -65,35 +113,51 @@ resource "aws_ecs_task_definition" "librechat_task" {
         },
         {
           name  = "SEARCH",
-          value = false
+          value = "false"
         },
         {
           name  = "ALLOW_EMAIL_LOGIN",
-          value = true
+          value = "true"
         },
         {
           name  = "ALLOW_REGISTRATION",
-          value = false
+          value = "false"
         },
         {
           name  = "ALLOW_SOCIAL_REGISTRATION",
-          value = false
+          value = "false"
         },
         {
           name  = "ALLOW_PASSWORD_RESET",
-          value = false
+          value = "false"
         },
         {
           name  = "ALLOW_UNVERIFIED_EMAIL_LOGIN",
-          value = true
+          value = "true"
         },
         {
           name  = "JWT_SECRET",
-          value = jsondecode(aws_secretsmanager_secret_version.librechat_jwt_secret_value.secret_string).key
+          value = "${jsondecode(aws_secretsmanager_secret_version.librechat_jwt_secret_value.secret_string).secret}"
         },
         {
           name  = "JWT_REFRESH_SECRET",
-          value = jsondecode(aws_secretsmanager_secret_version.librechat_jwt_secret_value.secret_string).refresh
+          value = "${jsondecode(aws_secretsmanager_secret_version.librechat_jwt_secret_value.secret_string).refresh}"
+        },
+        {
+          name  = "CREDS_KEY",
+          value = "${jsondecode(aws_secretsmanager_secret_version.librechat_creds_secret_value.secret_string).key}"
+        },
+        {
+          name  = "CREDS_IV",
+          value = "${jsondecode(aws_secretsmanager_secret_version.librechat_creds_secret_value.secret_string).iv}"
+        },
+        {
+          name  = "SESSION_EXPIRY",
+          value = "1000 * 60 * 15"
+        },
+        {
+          name  = "REFRESH_TOKEN_EXPIRY",
+          value = "(1000 * 60 * 60 * 24) * 7"
         },
         {
           name  = "APP_TITLE",
@@ -170,7 +234,7 @@ resource "aws_ecs_service" "librechat_service" {
   load_balancer {
     target_group_arn = aws_lb_target_group.librechat_tg.arn
     container_name   = "librechat"
-    container_port   = 4000
+    container_port   = 3080
   }
 
   desired_count = 1

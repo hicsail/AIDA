@@ -1,7 +1,7 @@
 # DocumentDB Password
 resource "random_password" "aida_documentdb_password" {
   length      = 20
-  special     = true
+  special     = false
   min_special = 0
 }
 
