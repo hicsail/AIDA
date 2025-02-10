@@ -18,11 +18,6 @@ variable "database_url" {
   type        = string
 }
 
-variable "redis_host" {
-  description = "Redis Host"
-  type        = string
-}
-
 variable "execution_role_arn" {
   description = "Execution IAM role ARN"
   type        = string
@@ -40,5 +35,10 @@ variable "ecs_log_group" {
 
 variable "cluster_id" {
   description = "Fargate Cluster ID"
+  type        = string
+}
+
+variable "litellm_key" {
+  description = "LiteLLM Access Key"
   type        = string
 }

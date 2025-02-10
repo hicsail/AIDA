@@ -1,66 +1,147 @@
+# LibreChat JWT Secret
+resource "random_password" "librechat_jwt_secret" {
+  length      = 20
+  special     = false
+  min_special = 0
+}
+
+# LibreChat JWT Refresh
+resource "random_password" "librechat_jwt_refresh" {
+  length      = 20
+  special     = false
+  min_special = 0
+}
+
+resource "aws_secretsmanager_secret" "librechat_jwt_secret" {
+  name = "librechat-jwt-secret"
+}
+
+resource "aws_secretsmanager_secret_version" "librechat_jwt_secret_value" {
+  secret_id = aws_secretsmanager_secret.librechat_jwt_secret.id
+  secret_string = jsonencode({
+    secret  = random_password.librechat_jwt_secret.result,
+    refresh = random_password.librechat_jwt_refresh.result
+  })
+}
+
+# EFS to store configuration
+resource "aws_efs_file_system" "librechat_efs" {
+  creation_token = "librechat_efs"
+}
+
 # Fargate Task Definition
-resource "aws_ecs_task_definition" "task" {
+resource "aws_ecs_task_definition" "librechat_task" {
   family                   = "librechat-task"
-  cpu                      = "4096"   # Adjust CPU as needed
-  memory                   = "8192"   # Adjust memory as needed
+  cpu                      = "4096" # Adjust CPU as needed
+  memory                   = "8192" # Adjust memory as needed
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
-  task_role_arn = aws_iam_role.ecs_task_role.arn
+  execution_role_arn       = var.execution_role_arn
+  task_role_arn            = var.ecs_task_role_arn
 
   container_definitions = jsonencode([
     {
-      name        = "aida-api"
-      image       = "${aws_ecr_repository.aida_api.repository_url}:main"
+      name  = "librechat"
+      image = "ghcr.io/danny-avila/librechat-dev:latest"
       portMappings = [
         {
-          containerPort = 3000
-          hostPort      = 3000
+          containerPort = 3080
+          hostPort      = 3080
           protocol      = "tcp"
         }
       ]
       environment = [
         {
-          name  = "DATABASE_URL"
+          name  = "HOST",
+          value = "0.0.0.0"
+        },
+        {
+          name  = "PORT"
+          value = 3080
+        },
+        {
+          name  = "MONGO_URI",
           value = var.database_url
         },
         {
-          name  = "REDIS_HOST"
-          value = var.redis_host
+          name  = "SEARCH",
+          value = false
         },
         {
-          name  = "REDIS_PORT"
-          value = "6379"
+          name  = "ALLOW_EMAIL_LOGIN",
+          value = true
+        },
+        {
+          name  = "ALLOW_REGISTRATION",
+          value = false
+        },
+        {
+          name  = "ALLOW_SOCIAL_REGISTRATION",
+          value = false
+        },
+        {
+          name  = "ALLOW_PASSWORD_RESET",
+          value = false
+        },
+        {
+          name  = "ALLOW_UNVERIFIED_EMAIL_LOGIN",
+          value = true
+        },
+        {
+          name  = "JWT_SECRET",
+          value = jsondecode(aws_secretsmanager_secret_version.librechat_jwt_secret_value.secret_string).key
+        },
+        {
+          name  = "JWT_REFRESH_SECRET",
+          value = jsondecode(aws_secretsmanager_secret_version.librechat_jwt_secret_value.secret_string).refresh
+        },
+        {
+          name  = "APP_TITLE",
+          value = "LibreChat BU"
+        },
+        {
+          name  = "HELP_AND_FAQ_URL",
+          value = "https://librechat.ai"
+        },
+        {
+          name  = "CONFIG_PATH",
+          value = "/efs/librechat.yaml"
+        },
+        {
+          name  = "librechat_API_KEY",
+          value = var.librechat_key
         }
       ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.ecs_log_group.name
+          "awslogs-group"         = var.ecs_log_group
           "awslogs-region"        = "us-east-1"
           "awslogs-stream-prefix" = "ecs"
         }
       }
-      healthCheck = {
-        command     = ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
-        interval    = 30
-        timeout     = 5
-        retries     = 3
-        startPeriod = 60
-      }
     }
   ])
+
+  volume {
+    name = "librechat_config"
+
+    efs_volume_configuration {
+      file_system_id = aws_efs_file_system.librechat_efs.id
+      root_directory = "/efs/"
+    }
+  }
 }
 
 # Security Group for Fargate
-resource "aws_security_group" "fargate_sg" {
-  name        = "fargate-sg"
+resource "aws_security_group" "librechat_sg" {
+  name        = "librechat-sg"
   description = "Allow inbound traffic to Fargate service"
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port   = 3000
-    to_port     = 3000
+    from_port   = 3080
+    to_port     = 3080
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -74,96 +155,44 @@ resource "aws_security_group" "fargate_sg" {
 }
 
 # Fargate Service
-resource "aws_ecs_service" "service" {
-  name            = "aida-api-service"
-  cluster         = aws_ecs_cluster.aida-api.id
-  task_definition = aws_ecs_task_definition.task.arn
+resource "aws_ecs_service" "librechat_service" {
+  name            = "librechat-service"
+  cluster         = var.cluster_id
+  task_definition = aws_ecs_task_definition.librechat_task.arn
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = var.private_subnet_ids
-    security_groups = [aws_security_group.fargate_sg.id]
+    subnets          = var.private_subnet_ids
+    security_groups  = [aws_security_group.librechat_sg.id]
     assign_public_ip = false
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.tg.arn
-    container_name   = "aida-api"
-    container_port   = 3000
-  }
-
-  desired_count = 1
-}
-
-# Fargate AI Task Definition
-resource "aws_ecs_task_definition" "ai-task" {
-  family                   = "aida-ai-task"
-  cpu                      = "1024"   # Adjust CPU as needed
-  memory                   = "2048"   # Adjust memory as needed
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
-  task_role_arn = aws_iam_role.ecs_task_role.arn
-
-  container_definitions = jsonencode([
-    {
-      name        = "aida-ai"
-      image       = "${aws_ecr_repository.aida_ai.repository_url}:main"
-      environment = [
-        {
-          name  = "REDIS_HOST"
-          value = var.redis_host
-        },
-        {
-          name  = "REDIS_PORT"
-          value = "6379"
-        }
-      ]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.ecs_log_group.name
-          "awslogs-region"        = "us-east-1"
-          "awslogs-stream-prefix" = "ecs"
-        }
-      }
-    }
-  ])
-}
-
-# Fargate Service
-resource "aws_ecs_service" "ai-service" {
-  name            = "aida-ai-service"
-  cluster         = aws_ecs_cluster.aida-api.id
-  task_definition = aws_ecs_task_definition.ai-task.arn
-  launch_type     = "FARGATE"
-
-  network_configuration {
-    subnets         = var.private_subnet_ids
-    security_groups = [aws_security_group.fargate_sg.id]
-    assign_public_ip = false
+    target_group_arn = aws_lb_target_group.librechat_tg.arn
+    container_name   = "librechat"
+    container_port   = 4000
   }
 
   desired_count = 1
 }
 
 # Application Load Balancer
-resource "aws_lb_target_group" "tg" {
-  name        = "aida-api-tg"
-  port        = 3000
+resource "aws_lb_target_group" "librechat_tg" {
+  name        = "librechat-tg"
+  port        = 3080
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
 
   health_check {
-    path                = "/"
-    protocol            = "HTTP"
-    matcher             = "200-399"
+    path     = "/"
+    protocol = "HTTP"
+    matcher  = "200-399"
   }
 }
 
-resource "aws_security_group" "alb_sg" {
-  name        = "alb-sg"
+resource "aws_security_group" "librechat_alb_sg" {
+  name        = "librechat-alb-sg"
   description = "Security group for the Application Load Balancer"
   vpc_id      = var.vpc_id
 
@@ -195,24 +224,22 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
-
-
-resource "aws_lb" "alb" {
-  name               = "aida-api-alb"
+resource "aws_lb" "librechat_alb" {
+  name               = "librechat-alb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb_sg.id]
+  security_groups    = [aws_security_group.librechat_alb_sg.id]
   subnets            = var.public_subnet_ids
 }
 
 # ALB Listener
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.alb.arn
+resource "aws_lb_listener" "librechat_http" {
+  load_balancer_arn = aws_lb.librechat_alb.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.tg.arn
+    target_group_arn = aws_lb_target_group.librechat_tg.arn
   }
 }
