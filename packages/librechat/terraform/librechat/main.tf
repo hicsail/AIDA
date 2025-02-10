@@ -184,11 +184,13 @@ resource "aws_ecs_task_definition" "librechat_task" {
           "awslogs-region"        = "us-east-1"
           "awslogs-stream-prefix" = "ecs"
         }
-      }
-      volume = {
-        name = "librechat_config"
-        host_path = "/efs"
-      }
+      },
+      mountPoints = [
+        {
+          containerPath = "/efs"
+          sourceVolume = "librechat_config"
+        }
+      ]
     }
   ])
 
