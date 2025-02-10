@@ -58,6 +58,7 @@ resource "aws_docdb_cluster" "aida_documentdb" {
   vpc_security_group_ids          = [aws_security_group.aida_documentdb_sg.id]
   allow_major_version_upgrade     = true
   storage_encrypted               = true
+  db_cluster_parameter_group_name = aws_docdb_cluster_parameter_group.aida_group.name
 }
 
 resource "aws_docdb_cluster_instance" "aida_documentdb" {
@@ -69,4 +70,15 @@ resource "aws_docdb_cluster_instance" "aida_documentdb" {
   instance_class     = "db.t3.medium"
   engine             = aws_docdb_cluster.aida_documentdb.engine
   depends_on         = [aws_docdb_cluster.aida_documentdb]
+}
+
+resource "aws_docdb_cluster_parameter_group" "aida_group" {
+  family      = "docdb5.0"
+  name        = "aida-param-group"
+  description = "docdb cluster parameter group"
+
+  parameter {
+    name  = "tls"
+    value = "disabled"
+  }
 }

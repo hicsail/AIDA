@@ -72,8 +72,9 @@ resource "aws_security_group" "librechat_efs_sg" {
 }
 
 resource "aws_efs_mount_target" "librechat_mount_target" {
+  count           = length(var.private_subnet_ids)
   file_system_id  = aws_efs_file_system.librechat_efs.id
-  subnet_id       = var.private_subnet_ids[0]
+  subnet_id       = var.private_subnet_ids[count.index]
   security_groups = [aws_security_group.librechat_efs_sg.id]
 }
 
@@ -184,6 +185,10 @@ resource "aws_ecs_task_definition" "librechat_task" {
           "awslogs-stream-prefix" = "ecs"
         }
       }
+      volume = {
+        name = "librechat_config"
+        host_path = "/efs"
+      }
     }
   ])
 
@@ -192,7 +197,6 @@ resource "aws_ecs_task_definition" "librechat_task" {
 
     efs_volume_configuration {
       file_system_id = aws_efs_file_system.librechat_efs.id
-      root_directory = "/efs/"
     }
   }
 }
@@ -211,10 +215,11 @@ resource "aws_security_group" "librechat_sg" {
   }
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port        = 0
+    to_port          = 0
+    protocol         = "-1"
+    cidr_blocks      = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
   }
 }
 
