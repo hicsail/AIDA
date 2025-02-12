@@ -210,21 +210,15 @@ resource "aws_security_group" "librechat_sg" {
   name        = "librechat-sg"
   description = "Allow inbound traffic to Fargate service"
   vpc_id      = var.vpc_id
+}
 
-  ingress {
-    from_port   = 3080
-    to_port     = 3080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+resource "aws_vpc_security_group_ingress_rule" "librechat_ingress" {
+  security_group_id = aws_security_group.librechat_sg.id
 
-  egress {
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-  }
+  cidr_ipv4   = "10.0.0.0/16"
+  from_port   = 3080
+  ip_protocol = "tcp"
+  to_port     = 3080
 }
 
 # Fargate Service
