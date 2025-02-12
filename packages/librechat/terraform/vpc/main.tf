@@ -20,7 +20,7 @@ resource "aws_subnet" "aida_private_subnet" {
 }
 
 resource "aws_internet_gateway" "main_gw" {
-  vpc_id = aws_vpc.aida_vpc.id
+  vpc_id    = aws_vpc.aida_vpc.id
 }
 
 resource "aws_route_table" "public_rt" {
@@ -32,8 +32,8 @@ resource "aws_route_table" "public_rt" {
 }
 
 resource "aws_route_table_association" "public_rt_assoc" {
-  count          = 1
-  subnet_id      = aws_subnet.aida_public_subnet[0].id
+  count          = length(aws_subnet.aida_public_subnet)
+  subnet_id      = aws_subnet.aida_public_subnet[count.index].id
   route_table_id = aws_route_table.public_rt.id
 }
 
