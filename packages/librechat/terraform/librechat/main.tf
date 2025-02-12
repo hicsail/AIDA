@@ -51,6 +51,7 @@ resource "aws_efs_file_system" "librechat_efs" {
   creation_token = "librechat_efs"
 }
 
+# EFS Security group
 resource "aws_security_group" "librechat_efs_sg" {
   name        = "librechat-efs-sg"
   description = "Allow inbound traffic to LibreChat efs"
@@ -71,6 +72,7 @@ resource "aws_security_group" "librechat_efs_sg" {
   }
 }
 
+# Mount support across subnets
 resource "aws_efs_mount_target" "librechat_mount_target" {
   count           = length(var.private_subnet_ids)
   file_system_id  = aws_efs_file_system.librechat_efs.id

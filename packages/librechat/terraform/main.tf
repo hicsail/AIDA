@@ -27,18 +27,21 @@ module "ecs" {
   source = "./ecs"
 }
 
+# PostreSQL Support
 module "rds" {
   source             = "./rds"
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
 }
 
+# Redis Cache
 module "redis" {
   source             = "./redis"
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
 }
 
+# LiteLLM Task
 module "litellm" {
   source             = "./litellm"
   vpc_id             = module.vpc.vpc_id
@@ -51,12 +54,14 @@ module "litellm" {
   cluster_id         = module.ecs.cluster_id
 }
 
+# MongoDB Support
 module "documentdb" {
   source             = "./documentdb/"
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
 }
 
+# LibreChat Task
 module "librechat" {
   source             = "./librechat/"
   vpc_id             = module.vpc.vpc_id
@@ -70,6 +75,7 @@ module "librechat" {
   litellm_key        = module.litellm.litellm_key
 }
 
+# Virtual Private Cloud
 module "vpc" {
   source = "./vpc"
 }

@@ -23,7 +23,7 @@ resource "aws_docdb_subnet_group" "aida_documentdb_subnet_group" {
   subnet_ids  = var.private_subnet_ids
 }
 
-# AIDA Security Group
+# DocumentDB Security Group
 resource "aws_security_group" "aida_documentdb_sg" {
   name        = "aida-documentdb-sg"
   description = "Security Group for AIDA API DocumentDB Cluster"
@@ -44,6 +44,7 @@ resource "aws_security_group" "aida_documentdb_sg" {
   }
 }
 
+# DocumentDB Cluster
 resource "aws_docdb_cluster" "aida_documentdb" {
   enabled_cloudwatch_logs_exports = ["audit"]
   deletion_protection             = true
@@ -61,6 +62,7 @@ resource "aws_docdb_cluster" "aida_documentdb" {
   db_cluster_parameter_group_name = aws_docdb_cluster_parameter_group.aida_group.name
 }
 
+# Cluster instances
 resource "aws_docdb_cluster_instance" "aida_documentdb" {
   count = 2
   # Setting promotion tier to 0 makes the instance eligible to become a writer.
@@ -72,6 +74,7 @@ resource "aws_docdb_cluster_instance" "aida_documentdb" {
   depends_on         = [aws_docdb_cluster.aida_documentdb]
 }
 
+# Custom DocumentDB group for custom settings
 resource "aws_docdb_cluster_parameter_group" "aida_group" {
   family      = "docdb5.0"
   name        = "aida-param-group"
