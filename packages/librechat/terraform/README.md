@@ -46,3 +46,29 @@ https://docs.aws.amazon.com/efs/latest/ug/mounting-fs-mount-helper-ec2-linux.htm
 
 At this point the file should be in the correct place. The LibreChat Fargate task will likely need to be manually
 re-deployed for the change to take effect.
+
+### Request Access to Models in AWS Bedrock
+
+Model access is granted on a per-request basis (can request all models at once).
+
+https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/modelaccess
+
+
+### Add Models to LiteLLM
+
+Once the target model is enabled in AWS Bedrock, it can be added in LiteLLM.
+
+1. Navigate to the "Models" page in the admin UI
+
+2. Select add model with the following information
+
+* Provider: Amazon Bedrock
+* LiteLLM Model Name(s): Name of the model enabled in AWS bedrock
+* Public Model Name: Any appropriate name
+* AWS Access Key ID: `os.environ/LITELLM_BEDROCK_ACCESS_ID`
+* AWS Secret Access Key: `os.environ/LITELLM_BEDROCK_ACCESS_SECRET`
+* AWS Region Name: Region of deployment, typically `us-east-1`
+
+3. Select Add Model
+
+4. LibreChat may need to be restarted for the new model to be visible

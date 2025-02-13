@@ -43,15 +43,17 @@ module "redis" {
 
 # LiteLLM Task
 module "litellm" {
-  source             = "./litellm"
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnet_ids
-  public_subnet_ids  = module.vpc.public_subnet_ids
-  database_url       = module.rds.database_litellm
-  execution_role_arn = module.ecs.execution_role_arn
-  ecs_task_role_arn  = module.ecs.ecs_task_role_arn
-  ecs_log_group      = module.ecs.ecs_log_group
-  cluster_id         = module.ecs.cluster_id
+  source                = "./litellm"
+  vpc_id                = module.vpc.vpc_id
+  private_subnet_ids    = module.vpc.private_subnet_ids
+  public_subnet_ids     = module.vpc.public_subnet_ids
+  database_url          = module.rds.database_litellm
+  execution_role_arn    = module.ecs.execution_role_arn
+  ecs_task_role_arn     = module.ecs.ecs_task_role_arn
+  ecs_log_group         = module.ecs.ecs_log_group
+  cluster_id            = module.ecs.cluster_id
+  bedrock_access_id     = module.bedrock.bedrock_access_id
+  bedrock_access_secret = module.bedrock.bedrock_access_secret
 }
 
 # MongoDB Support
@@ -78,4 +80,9 @@ module "librechat" {
 # Virtual Private Cloud
 module "vpc" {
   source = "./vpc"
+}
+
+# Bedrock Access
+module "bedrock" {
+  source = "./bedrock"
 }
