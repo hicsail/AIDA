@@ -79,3 +79,8 @@ module "librechat" {
 module "vpc" {
   source = "./vpc"
 }
+
+# Bedrock Access
+module "bedrock" {
+  source = "./bedrock"
+}
