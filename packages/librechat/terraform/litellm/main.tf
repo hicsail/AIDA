@@ -64,6 +64,10 @@ resource "aws_ecs_task_definition" "litellm_task" {
         {
           name  = "LITELLM_BEDROCK_ACCESS_SECRET",
           value = var.bedrock_access_secret
+        },
+        {
+          name  = "STORE_MODEL_IN_DB",
+          value = "true"
         }
       ]
       logConfiguration = {

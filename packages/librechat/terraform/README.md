@@ -46,3 +46,9 @@ https://docs.aws.amazon.com/efs/latest/ug/mounting-fs-mount-helper-ec2-linux.htm
 
 At this point the file should be in the correct place. The LibreChat Fargate task will likely need to be manually
 re-deployed for the change to take effect.
+
+### Request Access to Models in AWS Bedrock
+
+Model access is granted on a per-request basis (can request all models at once)
+
+https://us-east-1.console.aws.amazon.com/bedrock/home?region=us-east-1#/modelaccess
