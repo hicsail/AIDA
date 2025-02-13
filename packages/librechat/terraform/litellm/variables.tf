@@ -1,6 +1,6 @@
 variable "vpc_id" {
   description = "ID of the VPC where ECS resources will be deployed"
-  type = string
+  type        = string
 }
 
 variable "private_subnet_ids" {
@@ -13,7 +13,7 @@ variable "public_subnet_ids" {
   type        = list(string)
 }
 
-variable database_url {
+variable "database_url" {
   description = "Database URL"
   type        = string
 }
@@ -35,5 +35,15 @@ variable "ecs_log_group" {
 
 variable "cluster_id" {
   description = "Fargate Cluster ID"
+  type        = string
+}
+
+variable "bedrock_access_id" {
+  description = "AWS Access ID for Bedrock Querying"
+  type        = string
+}
+
+variable "bedrock_access_secret" {
+  description = "AWS Access Secret for Bedrock Querying"
   type        = string
 }

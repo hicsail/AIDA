@@ -36,7 +36,7 @@ resource "aws_iam_access_key" "aida_bedrock_access" {
 
 # Store the access key information in a secret
 resource "aws_secretsmanager_secret" "aida_bedrock_secret" {
-  name = "librechat-jwt-secret"
+  name = "aida-bedrock-secret"
 }
 
 resource "aws_secretsmanager_secret_version" "aida_bedrock_secret_value" {

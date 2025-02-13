@@ -18,7 +18,7 @@ resource "aws_secretsmanager_secret" "litellm_secret" {
 resource "aws_secretsmanager_secret_version" "litellm_secret_value" {
   secret_id = aws_secretsmanager_secret.litellm_secret.id
   secret_string = jsonencode({
-    key = "sk-${random_password.litellm_master_password.result}",
+    key  = "sk-${random_password.litellm_master_password.result}",
     salt = "sk-${random_password.litellm_key_password.result}"
   })
 }
@@ -50,12 +50,20 @@ resource "aws_ecs_task_definition" "litellm_task" {
           value = var.database_url
         },
         {
-          name = "LITELLM_MASTER_KEY",
+          name  = "LITELLM_MASTER_KEY",
           value = jsondecode(aws_secretsmanager_secret_version.litellm_secret_value.secret_string).key
         },
         {
-          name = "LITELLM_SALT_KEY",
+          name  = "LITELLM_SALT_KEY",
           value = jsondecode(aws_secretsmanager_secret_version.litellm_secret_value.secret_string).salt
+        },
+        {
+          name  = "LITELLM_BEDROCK_ACCESS_ID",
+          value = var.bedrock_access_id
+        },
+        {
+          name  = "LITELLM_BEDROCK_ACCESS_SECRET",
+          value = var.bedrock_access_secret
         }
       ]
       logConfiguration = {
