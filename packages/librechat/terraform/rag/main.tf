@@ -118,7 +118,7 @@ resource "aws_lb_target_group" "rag_tg" {
   health_check {
     path     = "/"
     protocol = "HTTP"
-    matcher  = "200-399"
+    matcher  = "200-499"
   }
 }
 

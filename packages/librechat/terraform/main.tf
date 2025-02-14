@@ -76,6 +76,7 @@ module "librechat" {
   cluster_id         = module.ecs.cluster_id
   litellm_key        = module.litellm.litellm_key
   rag_dns            = module.rag.rag_dns
+  litellm_dns        = module.litellm.litellm_dns
 }
 
 # Virtual Private Cloud
