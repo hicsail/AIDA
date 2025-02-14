@@ -38,12 +38,22 @@ variable "cluster_id" {
   type        = string
 }
 
-variable "litellm_key" {
-  description = "LiteLLM Access Key"
+variable "database_password" {
+  description = "PostgreSQL Password"
   type        = string
 }
 
-variable "rag_dns" {
-  description = "DNS of RAG Endpoint"
+variable "database_host" {
+  description = "PostgreSQL Host"
+  type        = string
+}
+
+variable "bedrock_access_id" {
+  description = "AWS Access ID for Bedrock Querying"
+  type        = string
+}
+
+variable "bedrock_access_secret" {
+  description = "AWS Access Secret for Bedrock Querying"
   type        = string
 }

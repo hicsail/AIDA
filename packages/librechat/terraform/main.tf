@@ -75,11 +75,29 @@ module "librechat" {
   ecs_log_group      = module.ecs.ecs_log_group
   cluster_id         = module.ecs.cluster_id
   litellm_key        = module.litellm.litellm_key
+  rag_dns            = module.rag.rag_dns
 }
 
 # Virtual Private Cloud
 module "vpc" {
   source = "./vpc"
+}
+
+# RAG API
+module "rag" {
+  source                = "./rag"
+  vpc_id                = module.vpc.vpc_id
+  private_subnet_ids    = module.vpc.private_subnet_ids
+  public_subnet_ids     = module.vpc.public_subnet_ids
+  database_url          = module.documentdb.database_librechat
+  execution_role_arn    = module.ecs.execution_role_arn
+  ecs_task_role_arn     = module.ecs.ecs_task_role_arn
+  ecs_log_group         = module.ecs.ecs_log_group
+  cluster_id            = module.ecs.cluster_id
+  database_password     = module.rds.database_password
+  database_host         = module.rds.database_host
+  bedrock_access_id     = module.bedrock.bedrock_access_id
+  bedrock_access_secret = module.bedrock.bedrock_access_secret
 }
 
 # Bedrock Access
