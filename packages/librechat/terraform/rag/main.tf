@@ -21,7 +21,7 @@ resource "aws_ecs_task_definition" "rag_task" {
       ]
       environment = [
         {
-          name  = "POSTRESQL_DB"
+          name  = "POSTGRES_DB"
           value = "rag"
         },
         {
