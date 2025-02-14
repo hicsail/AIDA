@@ -52,7 +52,7 @@ Create an EC2 instance you can SSH into in the same VPC as the EFS instance
 
 https://docs.aws.amazon.com/efs/latest/ug/mounting-fs-mount-helper-ec2-linux.html
 
-3. SCP the librechat config to the EC2 instance
+3. SCP the librechat config to the EC2 instance (located in `assets/librechat.yaml`)
 
 4. Place the file in the EFS root directoy
 
