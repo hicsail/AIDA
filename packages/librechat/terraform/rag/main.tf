@@ -55,6 +55,10 @@ resource "aws_ecs_task_definition" "rag_task" {
         {
           name = "AWS_SECRET_ACCESS_KEY",
           value = var.bedrock_access_secret
+        },
+        {
+          name = "RAG_API_URL",
+          value = "http://${var.rag_dns}"
         }
       ]
       logConfiguration = {

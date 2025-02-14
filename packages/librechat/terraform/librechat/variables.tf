@@ -42,3 +42,8 @@ variable "litellm_key" {
   description = "LiteLLM Access Key"
   type        = string
 }
+
+variable "rag_dns" {
+  description = "DNS of RAG Endpoint"
+  type        = string
+}
