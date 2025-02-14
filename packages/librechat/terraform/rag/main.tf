@@ -84,7 +84,7 @@ resource "aws_security_group" "rag_sg" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "rag_ingress" {
-  security_group_id = aws_security_group.librechat_sg.id
+  security_group_id = aws_security_group.rag_sg.id
 
   cidr_ipv4   = "10.0.0.0/16"
   from_port   = 8000
