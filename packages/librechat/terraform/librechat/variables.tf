@@ -47,3 +47,8 @@ variable "rag_dns" {
   description = "DNS of RAG Endpoint"
   type        = string
 }
+
+variable "litellm_dns" {
+  description = "DNS of LiteLLM"
+  type        = string
+}

@@ -181,6 +181,10 @@ resource "aws_ecs_task_definition" "librechat_task" {
         {
           name = "RAG_API_URL",
           value = "http://${var.rag_dns}"
+        },
+        {
+          name = "LITELLM_URL",
+          value = "http://${var.litellm_dns}"
         }
       ]
       logConfiguration = {
